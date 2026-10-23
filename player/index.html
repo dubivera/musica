@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player</title>
+<style>
+  body{margin:0;padding:8px;font-family:Georgia,serif;background:transparent;color:#222}
+  .t{font-size:15px;margin:0 0 6px}
+  audio{width:100%}
+  .err{color:#a00;font-size:14px}
+</style>
+</head>
+<body>
+<p class="t" id="titolo"></p>
+<audio id="a" controls preload="none"></audio>
+<script>
+  // Uso: player/?b=nome-file.mp3&t=Titolo del brano
+  var p = new URLSearchParams(location.search);
+  var b = p.get('b') || '';
+  var t = p.get('t') || '';
+  if (/^[\w.\- ]+\.(mp3|m4a|ogg|wav)$/i.test(b)) {
+    document.getElementById('a').src = '../musica/' + encodeURIComponent(b);
+    document.getElementById('titolo').textContent = t;
+  } else {
+    document.body.innerHTML = '<p class="err">Brano non indicato o nome file non valido.</p>';
+  }
+</script>
+</body>
+</html>
