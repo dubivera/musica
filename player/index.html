@@ -3,28 +3,121 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Player</title>
+<title>Musica per leggere</title>
 <style>
-  body{margin:0;padding:8px;font-family:Georgia,serif;background:transparent;color:#222}
-  .t{font-size:15px;margin:0 0 6px}
-  audio{width:100%}
-  .err{color:#a00;font-size:14px}
+  :root{--ink:#211D30;--accent:#8975FE;--line:#e4e1ee}
+  *{box-sizing:border-box}
+  body{margin:0;padding:6px;font-family:Georgia,serif;background:transparent;color:var(--ink)}
+  .box{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  button{font:inherit;cursor:pointer;border:0;border-radius:50%;width:38px;height:38px;flex:none;display:grid;place-items:center;color:#fff;background:var(--accent)}
+  button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  svg{width:18px;height:18px;fill:currentColor}
+  .info{flex:1;min-width:0;line-height:1.25}
+  .titolo{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub{font-size:12px;color:#5c5870;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sub a{color:inherit}
+  .bar{height:3px;background:var(--line);border-radius:2px;margin-top:5px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent)}
+  .vol{width:72px;flex:none;accent-color:var(--accent)}
+  @media (max-width:420px){.vol{display:none}}
+  .err{color:#a00;font-size:14px;margin:0}
 </style>
 </head>
 <body>
-<p class="t" id="titolo"></p>
-<audio id="a" controls preload="none"></audio>
+<div class="box" id="box" role="group" aria-label="Lettore musicale">
+  <button id="play" type="button" aria-label="Riproduci"><svg id="ico" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+  <button id="next" class="sec" type="button" aria-label="Brano successivo"><svg viewBox="0 0 24 24"><path d="M6 6v12l8.5-6zM16 6h2v12h-2z"/></svg></button>
+  <div class="info">
+    <div class="titolo" id="titolo">Musica per leggere</div>
+    <div class="sub" id="sub"><a href="../crediti.html" target="_blank" rel="noopener">Crediti</a></div>
+    <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+  </div>
+  <input class="vol" id="vol" type="range" min="0" max="1" step="0.05" value="0.6" aria-label="Volume">
+</div>
+<audio id="a" preload="metadata"></audio>
+<script src="tracks.js"></script>
 <script>
-  // Uso: player/?b=nome-file.mp3&t=Titolo del brano
-  var p = new URLSearchParams(location.search);
-  var b = p.get('b') || '';
-  var t = p.get('t') || '';
-  if (/^[\w.\- ]+\.(mp3|m4a|ogg|wav)$/i.test(b)) {
-    document.getElementById('a').src = '../musica/' + encodeURIComponent(b);
-    document.getElementById('titolo').textContent = t;
+(function(){
+  var a = document.getElementById('a'), play = document.getElementById('play'), ico = document.getElementById('ico');
+  var titolo = document.getElementById('titolo'), sub = document.getElementById('sub'), prog = document.getElementById('prog');
+  var vol = document.getElementById('vol');
+  var PLAY = 'M8 5v14l11-7z', PAUSE = 'M6 5h4v14H6zM14 5h4v14h-4z';
+  var KEY = 'dubivera-player';
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
+  function save(o){ try { var s = load(); for (var k in o) s[k] = o[k]; localStorage.setItem(KEY, JSON.stringify(s)); } catch(e){} }
+
+  // Modalita brano singolo: ?b=nome-file.mp3&t=Titolo (compatibile con l'uso precedente)
+  var q = new URLSearchParams(location.search), b = q.get('b');
+  var tracks;
+  if (b && /^[\w.\- ]+\.(mp3|m4a|ogg|wav)$/i.test(b)) {
+    tracks = [{file:b, title:q.get('t') || b, author:''}];
   } else {
-    document.body.innerHTML = '<p class="err">Brano non indicato o nome file non valido.</p>';
+    tracks = (window.TRACKS || []).filter(function(t){ return /^[\w.\- ]+\.(mp3|m4a|ogg|wav)$/i.test(t.file); });
   }
+  if (!tracks.length) { document.body.innerHTML = '<p class="err">Nessun brano disponibile.</p>'; return; }
+
+  function shuffle(n, first){
+    var o = [], i, j, t;
+    for (i = 0; i < n; i++) o.push(i);
+    for (i = n - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); t = o[i]; o[i] = o[j]; o[j] = t; }
+    if (first !== undefined) { o.splice(o.indexOf(first), 1); o.unshift(first); }
+    return o;
+  }
+
+  var st = load(), order, pos = 0, failures = 0;
+  if (st.n === tracks.length && st.order && st.order.length === tracks.length && st.pos < tracks.length) { order = st.order; pos = st.pos; }
+  else { order = shuffle(tracks.length); pos = 0; }
+
+  function setIcon(p){ ico.firstChild.setAttribute('d', p ? PAUSE : PLAY); play.setAttribute('aria-label', p ? 'Pausa' : 'Riproduci'); }
+  function show(t){
+    titolo.textContent = t.title;
+    sub.textContent = '';
+    if (t.author) sub.appendChild(document.createTextNode(t.author + ' · '));
+    var l = document.createElement('a'); l.href = '../crediti.html'; l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'Crediti';
+    sub.appendChild(l);
+  }
+  function cur(){ return tracks[order[pos]]; }
+  function setTrack(autoplay, resumeAt){
+    var t = cur();
+    a.src = '../musica/' + encodeURIComponent(t.file);
+    show(t); prog.style.width = '0';
+    save({n: tracks.length, order: order, pos: pos});
+    if (resumeAt) a.addEventListener('loadedmetadata', function f(){ a.removeEventListener('loadedmetadata', f); try { a.currentTime = resumeAt; } catch(e){} });
+    if (autoplay) { var pr = a.play(); if (pr && pr.catch) pr.catch(function(){ setIcon(false); }); }
+  }
+  function next(autoplay){
+    pos++;
+    if (pos >= order.length) {
+      var ultimo = order[order.length - 1];
+      order = shuffle(tracks.length);
+      if (tracks.length > 1 && order[0] === ultimo) order.push(order.shift());
+      pos = 0;
+    }
+    setTrack(autoplay, 0);
+  }
+
+  a.volume = typeof st.vol === 'number' ? st.vol : 0.6; vol.value = a.volume;
+  setTrack(false, st.t || 0);
+
+  play.addEventListener('click', function(){ if (a.paused) { var p = a.play(); if (p && p.catch) p.catch(function(){}); } else a.pause(); });
+  document.getElementById('next').addEventListener('click', function(){ next(true); });
+  vol.addEventListener('input', function(){ a.volume = +vol.value; save({vol: a.volume}); });
+  a.addEventListener('play', function(){ setIcon(true); failures = 0; });
+  a.addEventListener('pause', function(){ setIcon(false); });
+  a.addEventListener('ended', function(){ next(true); });
+  a.addEventListener('error', function(){
+    failures++;
+    if (failures >= tracks.length) { titolo.textContent = 'Brani non raggiungibili'; sub.textContent = ''; return; }
+    next(true);
+  });
+  var last = 0;
+  a.addEventListener('timeupdate', function(){
+    if (a.duration) prog.style.width = (a.currentTime / a.duration * 100) + '%';
+    var now = Date.now(); if (now - last > 1500) { last = now; save({t: a.currentTime}); }
+  });
+})();
 </script>
 </body>
 </html>
