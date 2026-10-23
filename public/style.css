@@ -1,8 +1,0 @@
-body{max-width:680px;margin:0 auto;padding:24px 16px;font-family:Georgia,serif;line-height:1.6;color:#222;background:#fafaf8}
-a{color:#333}
-header{border-bottom:1px solid #ddd;margin-bottom:24px}
-.posts{list-style:none;padding:0}
-.posts li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted #ccc}
-time{color:#888;font-size:.9em}
-footer{margin-top:48px;color:#888;font-size:.85em}
-@media (prefers-color-scheme:dark){body{color:#ddd;background:#161616}a{color:#eee}header,.posts li{border-color:#444}}
