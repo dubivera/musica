@@ -1,6 +1,11 @@
 // Domande di DVT — Dubivera Time.
 // Per aggiungerne una: copia un blocco { ... }, aggiorna c (affermazione), a (indice risposta esatta:
 // 0=Vera, 1=Falsa, 2=Dubbio), w (spiegazione), s (fonte, testo), u (fonte, link). Salva il file.
+
+// Immagine della sfida finale (quella coperta dalle 60 tessere).
+// Per cambiarla: carica la nuova foto in /img su GitHub, poi scrivi qui il suo nome file.
+window.DVT_IMG = 'https://dubivera.github.io/musica/img/home-orizzonte.webp';
+
 window.DVT_DOMANDE = [
 {c:'Una foto mostra Donald Trump e Vladimir Putin abbracciati a Mosca nel 1997.',a:1,
 w:'L’immagine è comparsa per la prima volta nel marzo 2025, non negli anni Novanta, e di quell’incontro non esiste traccia. Nella foto manca il neo che Putin ha sulla guancia sinistra, e fra i due c’è molta meno differenza di altezza che nella realtà.',
